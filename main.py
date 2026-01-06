@@ -223,8 +223,9 @@ def premium_menu(message):
     
     if res and res[0] == 1:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add("🏃‍♂️ ТРЕНУВАННЯ (50 ДНІВ)", "🍏 ХАРЧУВАННЯ (30 ДНІВ)", "⬅️ НАЗАД")
-        bot.send_message(message.chat.id, "🌟 **Ваш Преміум-кабінет!**", reply_markup=markup, parse_mode="Markdown")
+        markup.add("🏃‍♂️ ТРЕНУВАННЯ (50 ДНІВ)", "🍏 ХАРЧУВАННЯ (30 ДНІВ)")
+        markup.add("☕️ ПОДДЕРЖАТЬ АВТОРА", "⬅️ НАЗАД")
+        bot.send_message(message.chat.id, "🌟 **Ваш Преміум-кабинет!**", reply_markup=markup, parse_mode="Markdown")
     else:
         info_text = (
             "🚀 **ПРЕМІУМ КУРС: ТРАНСФОРМАЦІЯ**\n\n"
