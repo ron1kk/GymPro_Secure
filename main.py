@@ -172,6 +172,7 @@ def get_main_kb():
     m.add("ВЕРХ ТЕЛА", "НОГИ И ЯГОДИЦЫ")
     m.add("🔥 ПРЕМІУМ КУРС (120 грн)")
     m.add("🥗 ГАЙД ПО ПИТАНИЮ", "🌓 Сменить тему")
+    m.add("☕️ ПОДДЕРЖАТЬ АВТОРА")
     return m
 
 # --- ОБРАБОТЧИКИ ---
@@ -233,6 +234,16 @@ def premium_menu(message):
         ).format(uid)
         bot.send_message(message.chat.id, info_text, parse_mode="Markdown")
 
+@bot.message_handler(func=lambda message: message.text == "☕️ ПОДДЕРЖАТЬ АВТОРА")
+def support_author(message):
+    support_text = (
+        "☕️ **ПОДДЕРЖКА ПРОЕКТА**\n\n"
+        "Если тебе нравится бот и ты хочешь помочь в его развитии, ты можешь отправить любую сумму автору.\n\n"
+        "💳 **Карта для доната:**\n`4102321251250550`\n\n"
+        "Спасибо, что тренируешься с нами! 💪"
+    )
+    bot.send_message(message.chat.id, support_text, parse_mode="Markdown")
+
 @bot.message_handler(content_types=['photo'])
 def handle_payment(message):
     uid = message.from_user.id
@@ -293,4 +304,10 @@ def back(message): start(message)
 if __name__ == "__main__":
     pre_generate_voices()
     print("🚀 БОТ ЗАПУЩЕН И ЗАЩИЩЕН!")
-    bot.polling(none_stop=True)
+    
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=0, timeout=20)
+        except Exception as e:
+            print(f"⚠️ Ошибка сети: {e}. Перезапуск через 5 секунд...")
+            time.sleep(5)
