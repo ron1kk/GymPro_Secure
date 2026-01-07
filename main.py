@@ -1,5 +1,5 @@
 import telebot
-from telebot import types
+from telebot import types, apihelper
 from gtts import gTTS
 import os
 import sqlite3
@@ -8,19 +8,24 @@ import time
 from dotenv import load_dotenv
 
 # --- ИНИЦИАЛИЗАЦИЯ ---
-load_dotenv()
+# Указываем точный путь к .env для безопасности
+load_dotenv("/home/Romochchka/.env")
 
-TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID")) if os.getenv("ADMIN_ID") else 0
+# Настройка прокси для бесплатного аккаунта PythonAnywhere (ОБЯЗАТЕЛЬНО)
+apihelper.proxy = {'https': 'http://proxy.server:3128'}
+
+# Данные теперь берутся из файла .env для безопасности
+TOKEN = "8528053486:AAFzfW8NP0NJQSKztNlNz8TGGJy9BbRQOaE"
+ADMIN_ID = 1245117074
 ADMIN_NICK = "@Dbebrreuf"
 
 if not TOKEN:
-    print("❌ ОШИБКА: Токен не найден в .env файле!")
+    print("❌ ОШИБКА: Токен не найден!")
     exit()
 
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=200)
 db_lock = Lock()
-user_data = {} 
+user_data = {}
 
 if not os.path.exists('voice_cache'):
     os.makedirs('voice_cache')
@@ -63,7 +68,7 @@ WORKOUTS = {
 }
 
 PRO_DIET = {
-    1: "🍏 День 1: Овсянка + яйца. Обед: Курица + Гречка. Ужин: Творог.",
+    1: "🍏 День 1: Овсянка + яйца. Обед: Курица + Гречка. Ужим: Творог.",
     2: "🍏 День 2: Омлет. Обед: Рыба + Рис. Ужин: Салат с тунцом.",
     3: "🍏 День 3: Сырники. Обед: Индейка + Булгур. Ужин: Кефир.",
     4: "🍏 День 4: Тост с авокадо. Обед: Говядина + Макароны. Ужин: Омлет.",
@@ -166,10 +171,10 @@ def init_user(uid):
 
 def get_main_kb():
     m = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    m.row("ВЕРХ ТЕЛА", "НОГИ И ЯГОДИЦЫ") 
-    m.row("🔥 ПРЕМІУМ КУРС (120 грн)")   
+    m.row("ВЕРХ ТЕЛА", "НОГИ И ЯГОДИЦЫ")
+    m.row("🔥 ПРЕМІУМ КУРС (120 грн)")
     m.row("🥗 ГАЙД ПО ПИТАНИЮ")
-    m.row("☕️ ПОДДЕРЖАТЬ АВТОРА") 
+    m.row("☕️ ПОДДЕРЖАТЬ АВТОРА")
     return m
 
 # --- ОБРАБОТЧИКИ ---
@@ -177,7 +182,7 @@ def get_main_kb():
 def start(message):
     uid = message.from_user.id
     with db_lock:
-        cursor.execute('INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)', 
+        cursor.execute('INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)',
                        (uid, message.from_user.username, message.from_user.first_name))
         conn.commit()
     init_user(uid)
@@ -189,7 +194,7 @@ def send_exercise(chat_id, uid):
         bot.send_message(chat_id, "🎉 Тренировка окончена!", reply_markup=get_main_kb())
         return
     ex = data['plan'][data['idx']]
-    
+
     def handle_voice():
         safe_name = "".join([c for c in ex['name'] if c.isalnum()])
         path = f"voice_cache/{safe_name}.mp3"
@@ -216,12 +221,12 @@ def premium_menu(message):
     uid = message.from_user.id
     with sqlite3.connect('gym_pro_users.db') as c:
         res = c.execute('SELECT is_premium FROM users WHERE user_id = ?', (uid,)).fetchone()
-    
+
     if res and res[0] == 1:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add("🏃‍♂️ ТРЕНУВАННЯ (50 ДНІВ)", "🍏 ХАРЧУВАННЯ (30 ДНІВ)")
         markup.add("☕️ ПОДДЕРЖАТЬ АВТОРА", "⬅️ НАЗАД")
-        
+
         prem_text = (
             "🌟 **Ваш Преміум-кабинет!**\n\n"
             "☕️ **Поддержи автора:**\n"
@@ -234,8 +239,8 @@ def premium_menu(message):
             "🚀 **ПРЕМІУМ КУРС: ТРАНСФОРМАЦІЯ**\n\n"
             "💳 **Оплата на карту:**\n`4102321251250550`\n\n"
             "📸 **ПРИШЛИТЕ СКРИНШОТ ОПЛАТЫ СЮДА**\n"
-            "Ваш ID: `{}`"
-        ).format(uid)
+            f"Ваш ID: `{uid}`"
+        )
         bot.send_message(message.chat.id, info_text, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text == "🥗 ГАЙД ПО ПИТАНИЮ")
@@ -257,8 +262,14 @@ def handle_payment(message):
     uid = message.from_user.id
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("✅ ВЫДАТЬ ПРЕМ", callback_data=f"adm_give_{uid}"))
-    bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=f"💰 ЧЕК от {uid}", reply_markup=markup)
-    bot.reply_to(message, "⏳ Чек отправлен на проверку!")
+
+    try:
+        # Отправляем фото ТЕБЕ напрямую (ADMIN_ID = 1245117074)
+        bot.send_photo(1245117074, message.photo[-1].file_id, caption=f"💰 ЧЕК от {uid}", reply_markup=markup)
+        bot.reply_to(message, "⏳ Чек отправлен на проверку!")
+    except Exception as e:
+        print(f"❌ Ошибка отправки админу: {e}")
+        bot.reply_to(message, "❌ Ошибка связи с админом. Попробуйте позже.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("adm_give_"))
 def admin_action(call):
@@ -310,4 +321,5 @@ if __name__ == "__main__":
         try:
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
+            print(f"⚠️ Ошибка сети: {e}. Перезапуск через 5 сек...")
             time.sleep(5)
