@@ -313,6 +313,17 @@ def start_w(message):
 
 @bot.message_handler(func=lambda message: message.text == "⬅️ НАЗАД")
 def back(message): start(message)
+# --- НОВЫЙ БЛОК ДЛЯ АДМИНА ---
+@bot.message_handler(commands=['stats'])
+def get_stats(message):
+    if message.from_user.id == ADMIN_ID:
+        with sqlite3.connect('gym_pro_users.db') as c:
+            total = c.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+            premium = c.execute('SELECT COUNT(*) FROM users WHERE is_premium = 1').fetchone()[0]
+
+        bot.send_message(message.chat.id, f"📊 **СТАТИСТИКА БОТА**\n\n"
+                                          f"👤 Всего пользователей: {total}\n"
+                                          f"💎 С Премиумом: {premium}", parse_mode="Markdown")
 
 if __name__ == "__main__":
     pre_generate_voices()
