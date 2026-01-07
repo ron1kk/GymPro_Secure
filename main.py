@@ -5,10 +5,10 @@ import os
 import sqlite3
 from threading import Lock, Thread
 import time
-from dotenv import load_dotenv  # Библиотека защиты
+from dotenv import load_dotenv
 
-# --- ИНИЦИАЛИЗАЦИЯ ЗАЩИТЫ ---
-load_dotenv()  # Загружаем данные из файла .env
+# --- ИНИЦИАЛИЗАЦИЯ ---
+load_dotenv()
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID")) if os.getenv("ADMIN_ID") else 0
@@ -19,7 +19,6 @@ if not TOKEN:
     exit()
 
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=200)
-
 db_lock = Lock()
 user_data = {} 
 
@@ -45,7 +44,7 @@ def init_db():
 
 conn, cursor = init_db()
 
-# --- БАЗА УПРАЖНЕНИЙ (БЕСПЛАТНЫЕ) ---
+# --- КОНТЕНТ ---
 WORKOUTS = {
     "ВЕРХ ТЕЛА": [
         {"name": "Классические отжимания", "reps": "3 x 15", "desc": "Грудь почти касается пола, тело ровное."},
@@ -63,7 +62,6 @@ WORKOUTS = {
     ]
 }
 
-# --- ПРО ПИТАНИЕ (30 ДНЕЙ) ---
 PRO_DIET = {
     1: "🍏 День 1: Овсянка + яйца. Обед: Курица + Гречка. Ужин: Творог.",
     2: "🍏 День 2: Омлет. Обед: Рыба + Рис. Ужин: Салат с тунцом.",
@@ -97,7 +95,6 @@ PRO_DIET = {
     30: "🍏 День 30: Грудка + Рис + Зелень. Ужин: Творог 2%."
 }
 
-# --- ПРО ТРЕНИРОВКИ (50 ДНЕЙ) ---
 PRO_WORK = {
     1: "💪 День 1: 50 приседаний, 30 отжиманий, 2 мин планки.",
     2: "💪 День 2: 40 выпадов, 20 обратных отжиманий, 50 пресс.",
@@ -164,14 +161,14 @@ def pre_generate_voices():
 
 def init_user(uid):
     if uid not in user_data:
-        user_data[uid] = {'plan': [], 'idx': 0} # Удалили theme
+        user_data[uid] = {'plan': [], 'idx': 0}
     return user_data[uid]
 
 def get_main_kb():
     m = types.ReplyKeyboardMarkup(resize_keyboard=True)
     m.row("ВЕРХ ТЕЛА", "НОГИ И ЯГОДИЦЫ") 
     m.row("🔥 ПРЕМІУМ КУРС (120 грн)")   
-    m.row("🥗 ГАЙД ПО ПИТАНИЮ") # Кнопка теперь одна в ряду, "Сменить тему" удалена
+    m.row("🥗 ГАЙД ПО ПИТАНИЮ")
     m.row("☕️ ПОДДЕРЖАТЬ АВТОРА") 
     return m
 
@@ -200,7 +197,6 @@ def send_exercise(chat_id, uid):
             with open(path, 'rb') as v: bot.send_voice(chat_id, v)
 
     Thread(target=handle_voice).start()
-    # Убрали хедер темы
     caption = f"🔥 *{ex['name']}*\n🎯 {ex['reps']}\n\n📝 {ex['desc']}"
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("✅ ДАЛЬШЕ", callback_data="next_step"))
@@ -242,11 +238,15 @@ def premium_menu(message):
         ).format(uid)
         bot.send_message(message.chat.id, info_text, parse_mode="Markdown")
 
+@bot.message_handler(func=lambda message: message.text == "🥗 ГАЙД ПО ПИТАНИЮ")
+def diet_info(message):
+    text = "🥗 **ГАЙД ПО ПИТАНИЮ (ОСНОВЫ)**\n\n1. Пей больше воды.\n2. Ешь белок (курица, яйца, творог).\n3. Меньше сахара.\n\n*Полный рацион на 30 дней доступен в ПРЕМИУМ КУРСЕ!*"
+    bot.send_message(message.chat.id, text, parse_mode="Markdown")
+
 @bot.message_handler(func=lambda message: message.text == "☕️ ПОДДЕРЖАТЬ АВТОРА")
 def support_author(message):
     support_text = (
         "☕️ **ПОДДЕРЖКА ПРОЕКТА**\n\n"
-        "Если тебе нравится бот и ты хочешь помочь в его развитии, ты можешь отправить любую сумму автору.\n\n"
         "💳 **Карта для доната:**\n`4102321251250550`\n\n"
         "Спасибо, что тренируешься с нами! 💪"
     )
@@ -305,12 +305,9 @@ def back(message): start(message)
 
 if __name__ == "__main__":
     pre_generate_voices()
-    print("🚀 БОТ ЗАПУЩЕН И ГОТОВ К ТРАФИКУ!")
-    
+    print("🚀 БОТ ЗАПУЩЕН!")
     while True:
         try:
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
-            print(f"⚠️ Ошибка сети: {e}. Перезапуск через 5 секунд...")
             time.sleep(5)
-
