@@ -164,14 +164,14 @@ def pre_generate_voices():
 
 def init_user(uid):
     if uid not in user_data:
-        user_data[uid] = {'plan': [], 'idx': 0, 'theme': 'dark'}
+        user_data[uid] = {'plan': [], 'idx': 0} # Удалили theme
     return user_data[uid]
 
 def get_main_kb():
     m = types.ReplyKeyboardMarkup(resize_keyboard=True)
     m.row("ВЕРХ ТЕЛА", "НОГИ И ЯГОДИЦЫ") 
     m.row("🔥 ПРЕМІУМ КУРС (120 грн)")   
-    m.row("🥗 ГАЙД ПО ПИТАНИЮ", "🌓 Сменить тему") 
+    m.row("🥗 ГАЙД ПО ПИТАНИЮ") # Сделали на всю ширину
     m.row("☕️ ПОДДЕРЖАТЬ АВТОРА") 
     return m
 
@@ -184,7 +184,7 @@ def start(message):
                        (uid, message.from_user.username, message.from_user.first_name))
         conn.commit()
     init_user(uid)
-    bot.send_message(message.chat.id, "🚀 Бот GYM PRO защищен и готов!", reply_markup=get_main_kb())
+    bot.send_message(message.chat.id, "🚀 Бот GYM PRO готов! Выбирай тренировку или курс:", reply_markup=get_main_kb())
 
 def send_exercise(chat_id, uid):
     data = user_data.get(uid)
@@ -200,8 +200,8 @@ def send_exercise(chat_id, uid):
             with open(path, 'rb') as v: bot.send_voice(chat_id, v)
 
     Thread(target=handle_voice).start()
-    header = "🌑 [DARK]" if data['theme'] == 'dark' else "☀️ [LIGHT]"
-    caption = f"{header}\n\n🔥 *{ex['name']}*\n🎯 {ex['reps']}\n\n📝 {ex['desc']}"
+    # Убрали хедер темы
+    caption = f"🔥 *{ex['name']}*\n🎯 {ex['reps']}\n\n📝 {ex['desc']}"
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("✅ ДАЛЬШЕ", callback_data="next_step"))
     bot.send_message(chat_id, caption, parse_mode="Markdown", reply_markup=markup)
@@ -226,7 +226,6 @@ def premium_menu(message):
         markup.add("🏃‍♂️ ТРЕНУВАННЯ (50 ДНІВ)", "🍏 ХАРЧУВАННЯ (30 ДНІВ)")
         markup.add("☕️ ПОДДЕРЖАТЬ АВТОРА", "⬅️ НАЗАД")
         
-        # ДОБАВИЛИ ТЕКСТ С ПОДДЕРЖКОЙ ВНУТРЬ ПРЕМИУМ-МЕНЮ
         prem_text = (
             "🌟 **Ваш Преміум-кабинет!**\n\n"
             "☕️ **Поддержи автора:**\n"
@@ -301,18 +300,12 @@ def start_w(message):
     d['plan'], d['idx'] = WORKOUTS[message.text], 0
     send_exercise(message.chat.id, uid)
 
-@bot.message_handler(func=lambda message: message.text == "🌓 Сменить тему")
-def theme(message):
-    d = init_user(message.from_user.id)
-    d['theme'] = 'light' if d['theme'] == 'dark' else 'dark'
-    bot.reply_to(message, "✅ Тема изменена!")
-
 @bot.message_handler(func=lambda message: message.text == "⬅️ НАЗАД")
 def back(message): start(message)
 
 if __name__ == "__main__":
     pre_generate_voices()
-    print("🚀 БОТ ЗАПУЩЕН И ЗАЩИЩЕН!")
+    print("🚀 БОТ ЗАПУЩЕН И ГОТОВ К ТРАФИКУ!")
     
     while True:
         try:
