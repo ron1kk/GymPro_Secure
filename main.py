@@ -15,7 +15,7 @@ load_dotenv("/home/Romochchka/.env")
 apihelper.proxy = {'https': 'http://proxy.server:3128'}
 
 # Данные теперь берутся из файла .env для безопасности
-TOKEN = "8528053486:AAFzfW8NP0NJQSKztNlNz8TGGJy9BbRQOaE"
+TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 1245117074
 ADMIN_NICK = "@Dbebrreuf"
 
@@ -334,3 +334,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Ошибка сети: {e}. Перезапуск через 5 сек...")
             time.sleep(5)
+
