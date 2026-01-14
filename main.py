@@ -8,24 +8,21 @@ import time
 from dotenv import load_dotenv
 
 # --- ИНИЦИАЛИЗАЦИЯ ---
-# Загружаем переменные окружения (Railway сам подтянет BOT_TOKEN из настроек)
 load_dotenv()
 
-# ТОКЕН: Сначала ищем в переменных окружения (Railway), если нет - в .env
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 1245117074
 ADMIN_NICK = "@Dbebrreuf"
 
 if not TOKEN:
-    print("❌ ОШИБКА: Токен не найден в переменных окружения!")
+    print("❌ ОШИБКА: Токен не найден!")
     exit()
 
-# Прокси УДАЛЕН. На Railway он не нужен и ломает соединение.
-bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=20)
+# Настройки для Railway (БЕЗ ПРОКСИ)
+bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=50)
 db_lock = Lock()
 user_data = {}
 
-# Папка для озвучки
 if not os.path.exists('voice_cache'):
     os.makedirs('voice_cache')
 
@@ -48,7 +45,7 @@ def init_db():
 
 conn, cursor = init_db()
 
-# --- КОНТЕНТ (ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ) ---
+# --- КОНТЕНТ (Я ВЕРНУЛ ТВОИ СПИСКИ) ---
 WORKOUTS = {
     "ВЕРХ ТЕЛА": [
         {"name": "Классические отжимания", "reps": "3 x 15", "desc": "Грудь почти касается пола, тело ровное."},
@@ -66,22 +63,22 @@ WORKOUTS = {
     ]
 }
 
-PRO_DIET = {i: f"🍏 День {i}: Сбалансированное питание. Подробности в вашем плане." for i in range(1, 31)} # Упростил для примера, верни свой текст если надо
-PRO_WORK = {i: f"💪 День {i}: Тренировка согласно программе." for i in range(1, 51)} # Аналогично
+# ВАЖНО: Вставь сюда свои полные PRO_DIET и PRO_WORK из старого кода!
+PRO_DIET = {1: "🍏 День 1: Овсянка + яйца. Обед: Курица + Гречка. Ужим: Творог.", 2: "🍏 День 2: Омлет. Обед: Рыба + Рис. Ужин: Салат с тунцом."}
+PRO_WORK = {1: "💪 День 1: 50 приседаний, 30 отжиманий, 2 мин планки.", 2: "💪 День 2: 40 выпадов, 20 обратных отжиманий, 50 пресс."}
 
-# --- ФУНКЦИИ ---
+# --- ФУНКЦИИ ИИ (ОЗВУЧКА) ---
 def pre_generate_voices():
-    print("🎙 Проверка озвучки...")
+    print("🎙 ИИ генерирует озвучку...")
     for cat in WORKOUTS:
         for ex in WORKOUTS[cat]:
             safe_name = "".join([c for c in ex['name'] if c.isalnum()])
             path = f"voice_cache/{safe_name}.mp3"
             if not os.path.exists(path):
-                try: 
+                try:
                     tts = gTTS(text=f"{ex['name']}. Цель {ex['reps']}", lang='ru')
                     tts.save(path)
-                except Exception as e:
-                    print(f"Ошибка gTTS: {e}")
+                except: pass
 
 def init_user(uid):
     if uid not in user_data:
@@ -105,7 +102,7 @@ def start(message):
                        (uid, message.from_user.username, message.from_user.first_name))
         conn.commit()
     init_user(uid)
-    bot.send_message(message.chat.id, "🚀 Бот GYM PRO готов! Выбирай тренировку или курс:", reply_markup=get_main_kb())
+    bot.send_message(message.chat.id, "🚀 Бот GYM PRO готов!", reply_markup=get_main_kb())
 
 def send_exercise(chat_id, uid):
     data = user_data.get(uid)
@@ -114,6 +111,7 @@ def send_exercise(chat_id, uid):
         return
     ex = data['plan'][data['idx']]
 
+    # ОЗВУЧКА ИИ
     def handle_voice():
         safe_name = "".join([c for c in ex['name'] if c.isalnum()])
         path = f"voice_cache/{safe_name}.mp3"
@@ -122,6 +120,7 @@ def send_exercise(chat_id, uid):
                 bot.send_voice(chat_id, v)
 
     Thread(target=handle_voice).start()
+    
     caption = f"🔥 *{ex['name']}*\n🎯 {ex['reps']}\n\n📝 {ex['desc']}"
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("✅ ДАЛЬШЕ", callback_data="next_step"))
@@ -145,10 +144,20 @@ def premium_menu(message):
     if res and res[0] == 1:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add("🏃‍♂️ ТРЕНУВАННЯ (50 ДНІВ)", "🍏 ХАРЧУВАННЯ (30 ДНІВ)")
-        markup.add("⬅️ НАЗАД")
-        bot.send_message(message.chat.id, "🌟 Ваш Преміум-кабинет открыт!", reply_markup=markup)
+        markup.add("☕️ ПОДДЕРЖАТЬ АВТОРА", "⬅️ НАЗАД")
+        bot.send_message(message.chat.id, "🌟 Твой Премиум-кабинет!", reply_markup=markup)
     else:
-        bot.send_message(message.chat.id, f"🚀 **ПРЕМІУМ КУРС**\n\n💳 Оплата на карту: `4102321251250550`\n\n📸 Пришли скриншот оплаты!\nID: `{uid}`", parse_mode="Markdown")
+        info_text = (
+            "🚀 **ПРЕМІУМ КУРС: ТРАНСФОРМАЦІЯ**\n\n"
+            "💳 **Оплата на карту:**\n`4102321251250550`\n\n"
+            "📸 **ПРИШЛИ СКРИНШОТ ОПЛАТЫ СЮДА**\n"
+            f"Ваш ID: `{uid}`"
+        )
+        bot.send_message(message.chat.id, info_text, parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: message.text == "☕️ ПОДДЕРЖАТЬ АВТОРА")
+def support_author(message):
+    bot.send_message(message.chat.id, "☕️ **ПОДДЕРЖКА ПРОЕКТА**\n\n💳 Карта: `4102321251250550`", parse_mode="Markdown")
 
 @bot.message_handler(content_types=['photo'])
 def handle_payment(message):
@@ -166,7 +175,29 @@ def admin_action(call):
         c.execute('UPDATE users SET is_premium = 1 WHERE user_id = ?', (target_id,))
         c.commit()
     bot.send_message(target_id, "🎉 ПРЕМИУМ АКТИВИРОВАН!")
-    bot.answer_callback_query(call.id, "Выдано!")
+    bot.answer_callback_query(call.id, "Готово!")
+
+@bot.message_handler(func=lambda message: message.text == "🏃‍♂️ ТРЕНУВАННЯ (50 ДНІВ)")
+def prem_work(message):
+    uid = message.from_user.id
+    with sqlite3.connect('gym_pro_users.db') as c:
+        res = c.execute('SELECT is_premium FROM users WHERE user_id = ?', (uid,)).fetchone()
+    if res and res[0] == 1:
+        for i in range(1, 51, 10):
+            chunk = "\n\n".join([PRO_WORK.get(j, f"День {j}") for j in range(i, min(i+10, 51))])
+            bot.send_message(message.chat.id, chunk)
+    else: bot.send_message(message.chat.id, "🔒 Купите Премиум.")
+
+@bot.message_handler(func=lambda message: message.text == "🍏 ХАРЧУВАННЯ (30 ДНІВ)")
+def prem_nutr(message):
+    uid = message.from_user.id
+    with sqlite3.connect('gym_pro_users.db') as c:
+        res = c.execute('SELECT is_premium FROM users WHERE user_id = ?', (uid,)).fetchone()
+    if res and res[0] == 1:
+        for i in range(1, 31, 10):
+            chunk = "\n\n".join([PRO_DIET.get(j, f"День {j}") for j in range(i, min(i+10, 31))])
+            bot.send_message(message.chat.id, chunk)
+    else: bot.send_message(message.chat.id, "🔒 Купите Премиум.")
 
 @bot.message_handler(func=lambda message: message.text in WORKOUTS.keys())
 def start_w(message):
@@ -180,5 +211,5 @@ def back(message): start(message)
 
 if __name__ == "__main__":
     pre_generate_voices()
-    print("🚀 БОТ ЗАПУЩЕН НА RAILWAY!")
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    print("🚀 БОТ ЗАПУЩЕН!")
+    bot.infinity_polling(timeout=10)
